@@ -56,6 +56,64 @@ const S = {
   navBtn: (active) => ({ padding: "9px 18px", borderRadius: 50, border: "none", background: active ? P.lavenderDark : "transparent", color: active ? "#fff" : P.textMuted, fontWeight: 600, cursor: "pointer", fontSize: 13 }),
 };
 
+function MiniModalEstado({ modalEstado, setModalEstado, confirmarEstado, proyectoById, P, S }) {
+  const [fecha, setFecha] = useState("");
+  const [mes, setMes] = useState("");
+  const [prob, setProb] = useState(50);
+  const [fechaEsc, setFechaEsc] = useState("");
+  const [fechaTentativa, setFechaTentativa] = useState("");
+  const { prop, estado, tipo } = modalEstado;
+  const proy = proyectoById(prop.proyecto_id);
+  const esMixto = proy?.hito_pago === "mixto";
+
+  const guardar = () => {
+    if (tipo === "reserva") confirmarEstado({ mes_forecast: mes, prob_forecast: prob, fecha_promesa: fechaTentativa || null });
+    else if (tipo === "promesa") confirmarEstado({ fecha_promesa: fecha, fecha_escritura: esMixto ? fechaEsc : null, mes_forecast: null });
+    else if (tipo === "pagado") confirmarEstado({ fecha_promesa: fecha, mes_forecast: null });
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(80,60,120,0.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 250, backdropFilter: "blur(2px)" }}>
+      <div style={{ background: P.white, borderRadius: 20, padding: "24px", width: 320, boxShadow: "0 4px 32px rgba(0,0,0,0.15)" }}>
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+          {tipo === "reserva" ? "🔖 Reserva" : tipo === "promesa" ? "📋 Promesa firmada" : "✅ Pagado"}
+        </div>
+        <div style={{ fontSize: 12, color: P.textMuted, marginBottom: 16 }}>{prop.uf} UF · {proy?.nombre}</div>
+
+        {tipo === "reserva" && (
+          <>
+            <label style={S.label}>Mes estimado de conversión a promesa</label>
+            <input type="month" style={S.inp} value={mes} onChange={e => setMes(e.target.value)} />
+            <label style={S.label}>Fecha tentativa de firma promesa (opcional)</label>
+            <input type="date" style={S.inp} value={fechaTentativa} onChange={e => setFechaTentativa(e.target.value)} />
+            <label style={S.label}>Probabilidad de cierre: <strong>{prob}%</strong></label>
+            <input type="range" min={10} max={100} step={10} value={prob} onChange={e => setProb(parseInt(e.target.value))} style={{ width: "100%", marginBottom: 16, accentColor: P.peachDark }} />
+          </>
+        )}
+
+        {(tipo === "promesa" || tipo === "pagado") && (
+          <>
+            <label style={S.label}>Fecha de firma promesa</label>
+            <input type="date" style={S.inp} value={fecha} onChange={e => setFecha(e.target.value)} />
+          </>
+        )}
+
+        {tipo === "promesa" && esMixto && (
+          <>
+            <label style={S.label}>Fecha estimada escritura (2do pago)</label>
+            <input type="date" style={S.inp} value={fechaEsc} onChange={e => setFechaEsc(e.target.value)} />
+          </>
+        )}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button style={{ ...S.btnPrimary, flex: 1 }} onClick={guardar}>Confirmar</button>
+          <button style={S.btnGhost} onClick={() => setModalEstado(null)}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [inmobiliarias, setInmobiliarias] = useState([]);
   const [proyectos, setProyectos] = useState([]);
@@ -178,14 +236,34 @@ export default function App() {
   const closeModal = () => { setModal(null); setForm({}); };
   const ff = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const cambiarEstado = async (prop, nuevoEstado) => {
-    await db(`propiedades?id=eq.${prop.id}`, "PATCH", { estado: nuevoEstado });
+  const [modalEstado, setModalEstado] = useState(null); // { prop, estado }
+
+  const cambiarEstado = (prop, nuevoEstado) => {
+    if (nuevoEstado === prop.estado) return;
+    if (nuevoEstado === "reserva") {
+      // reserva no necesita fecha, solo mes forecast
+      setModalEstado({ prop, estado: nuevoEstado, tipo: "reserva" });
+    } else if (nuevoEstado === "promesa") {
+      setModalEstado({ prop, estado: nuevoEstado, tipo: "promesa" });
+    } else if (nuevoEstado === "pagado") {
+      setModalEstado({ prop, estado: nuevoEstado, tipo: "pagado" });
+    }
+  };
+
+  const confirmarEstado = async (extra = {}) => {
+    const { prop, estado } = modalEstado;
+    const body = { estado, ...extra };
+    await db(`propiedades?id=eq.${prop.id}`, "PATCH", body);
+    setModalEstado(null);
     await load();
   };
 
   const cambiarProb = async (prop, val) => {
-    await db(`propiedades?id=eq.${prop.id}`, "PATCH", { prob_forecast: val });
     setPropiedades(ps => ps.map(p => p.id === prop.id ? { ...p, prob_forecast: val } : p));
+  };
+
+  const guardarProb = async (prop, val) => {
+    await db(`propiedades?id=eq.${prop.id}`, "PATCH", { prob_forecast: val });
   };
 
   const savePropiedad = async () => {
@@ -280,7 +358,48 @@ export default function App() {
         {/* DASHBOARD */}
         {vista === "dashboard" && (
           <>
-            <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+            {/* Banner motivacional */}
+            <div style={{ background: `linear-gradient(135deg, ${P.lavenderDark}, #C2547A)`, borderRadius: 20, padding: "20px 24px", marginBottom: 20, position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", right: -10, top: -10, fontSize: 80, opacity: 0.15, transform: "rotate(15deg)" }}>🏠</div>
+              <div style={{ position: "absolute", right: 40, bottom: -15, fontSize: 60, opacity: 0.1, transform: "rotate(-10deg)" }}>✦</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
+                {new Date().toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 8 }}>
+                {tots.pendiente + tots.cobrado + tots.forecast === 0
+                  ? "¡Vamos Josefa! 🚀"
+                  : tots.cobrado > 0
+                  ? "¡Estás on fire, Josefa! 🔥"
+                  : "¡Vas con todo, Josefa! 💪"}
+              </div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
+                {tots.pendiente + tots.cobrado + tots.forecast === 0
+                  ? "Cada gran pipeline empieza con una primera venta. ¡Tú puedes!"
+                  : tots.cobrado > 0
+                  ? `Ya tienes ${fmtUF(tots.cobrado)} UF cobradas. ¡Sigue así!`
+                  : `Tienes ${fmtUF(tots.pendiente)} UF comprometidas. ¡El pago viene!`}
+              </div>
+              {propiedades.length > 0 && (
+                <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
+                  <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 10, padding: "8px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{propiedades.filter(p => p.estado === "reserva").length}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.75)" }}>Reservas</div>
+                  </div>
+                  <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 10, padding: "8px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{propiedades.filter(p => p.estado === "promesa").length}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.75)" }}>Promesas</div>
+                  </div>
+                  <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 10, padding: "8px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{propiedades.filter(p => p.estado === "pagado").length}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.75)" }}>Pagadas</div>
+                  </div>
+                  <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: 10, padding: "8px 14px", textAlign: "center", flex: 1 }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{fmtUF(tots.cobrado + tots.pendiente)} UF</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.75)" }}>Total pipeline</div>
+                  </div>
+                </div>
+              )}
+            </div>
               {[
                 { label: "Cobrado", val: tots.cobrado, bg: P.mint, color: P.mintDark },
                 { label: "Por cobrar", val: tots.pendiente, bg: P.sky, color: P.skyDark },
@@ -289,7 +408,7 @@ export default function App() {
                 <div key={c.label} style={S.metricCard(c.bg)}>
                   <div style={{ fontSize: 11, color: c.color, fontWeight: 600, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>{c.label}</div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: c.color }}>{fmtUF(c.val)} UF</div>
-                  <div style={{ fontSize: 11, color: c.color, opacity: 0.75 }}>${fmt(c.val * ufHoy)}</div>
+                  <div style={{ fontSize: 13, color: c.color, opacity: 0.85, marginTop: 2 }}>${fmt(c.val * ufHoy)}</div>
                 </div>
               ))}
             </div>
@@ -397,8 +516,8 @@ export default function App() {
                       <input type="range" min={0} max={100} step={10}
                         value={prop.prob_forecast || 50}
                         onChange={e => cambiarProb(prop, parseInt(e.target.value))}
-                        onMouseUp={async e => { await db(`propiedades?id=eq.${prop.id}`, "PATCH", { prob_forecast: parseInt(e.target.value) }); }}
-                        onTouchEnd={async e => { await db(`propiedades?id=eq.${prop.id}`, "PATCH", { prob_forecast: prop.prob_forecast }); }}
+                        onMouseUp={e => guardarProb(prop, parseInt(e.target.value))}
+                        onTouchEnd={e => guardarProb(prop, prop.prob_forecast)}
                         style={{ width: "100%", accentColor: P.peachDark }}
                       />
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: P.textMuted }}>
@@ -493,6 +612,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* MINI MODAL ESTADO */}
+      {modalEstado && <MiniModalEstado modalEstado={modalEstado} setModalEstado={setModalEstado} confirmarEstado={confirmarEstado} proyectoById={proyectoById} P={P} S={S} />}
 
       {/* MODAL PRINCIPAL */}
       {modal && (
