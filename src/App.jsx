@@ -431,7 +431,9 @@ export default function App() {
       <div style={{ background: P.white, borderBottom: `1px solid ${P.border}`, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
         <div>
           <div style={{ fontSize: 17, fontWeight: 700, color: P.lavenderDark, letterSpacing: -0.3 }}>mis comisiones ✦</div>
-          <div style={{ fontSize: 12, color: P.textMuted, marginTop: 1 }}>UF hoy: <strong>${fmt(ufHoy)}</strong></div>
+          <button onClick={() => { setUfInput(String(ufHoy)); setEditUF(true); }} style={{ fontSize: 12, color: P.lavenderDark, fontWeight: 600, background: P.lavender, border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", marginTop: 2 }}>
+            UF: ${fmt(ufHoy)} ✎
+          </button>
         </div>
         <nav style={{ display: "flex", gap: 6, background: P.lavender, borderRadius: 50, padding: 4 }}>
           {navItems.map(n => (
