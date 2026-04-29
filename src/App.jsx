@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 
 const SUPABASE_URL = "https://jjsdjqhhlgwxhhjufpih.supabase.co";
 const SUPABASE_KEY = "sb_publishable_t9Zft3LoUQ512V95sRMDqw_ojRQXnPB";
-const UF_FALLBACK = 38500;
+const UF_FALLBACK = 40000;
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
 // ── Paleta pastel ──────────────────────────────────────────────
