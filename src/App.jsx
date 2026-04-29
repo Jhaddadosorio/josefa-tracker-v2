@@ -229,7 +229,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [seeded, setSeeded] = useState(false);
-  const [ufManual, setUfManual] = useState("");
+  const [editUF, setEditUF] = useState(false);
+  const [ufInput, setUfInput] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -612,6 +613,28 @@ export default function App() {
           </>
         )}
       </div>
+
+      {/* MODAL UF */}
+      {editUF && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(80,60,120,0.25)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, backdropFilter: "blur(2px)" }}>
+          <div style={{ background: P.white, borderRadius: 20, padding: "28px 24px", width: 300, boxShadow: "0 4px 32px rgba(0,0,0,0.12)" }}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Actualizar UF</div>
+            <div style={{ fontSize: 12, color: P.textMuted, marginBottom: 16 }}>Ingresa el valor de la UF de hoy</div>
+            <input
+              autoFocus
+              type="number"
+              value={ufInput}
+              onChange={e => setUfInput(e.target.value)}
+              placeholder="Ej: 38500"
+              style={{ ...S.inp, fontSize: 18, fontWeight: 600, textAlign: "center" }}
+            />
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => { const v = parseFloat(ufInput); if (v > 1000) setUfHoy(v); setEditUF(false); }}>Guardar</button>
+              <button style={S.btnGhost} onClick={() => setEditUF(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL */}
       {modal && (
