@@ -399,7 +399,13 @@ export default function App() {
     await load();
   };
 
-  const proyectoSeleccionado = proyectoById(form.proyecto_id);
+  const cambiarEstado = async (prop) => {
+    const orden = ["reserva", "promesa", "pagado"];
+    const actual = orden.indexOf(prop.estado);
+    const siguiente = orden[(actual + 1) % orden.length];
+    await db(`propiedades?id=eq.${prop.id}`, "PATCH", { estado: siguiente });
+    await load();
+  };
 
   const saveProyecto = async () => {
     setSaving(true);
@@ -486,7 +492,7 @@ export default function App() {
                   const total = m.pagado + m.comprometido + m.forecast;
                   return (
                     <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                      <div style={{ fontSize: 9, color: P.textMuted, textAlign: "center" }}>{total > 0 ? fmtUF(total) : ""}</div>
+                      {total > 0 && <div style={{ fontSize: 8, color: P.textMuted, textAlign: "center", lineHeight: 1.2 }}>{fmtUF(total)}<br/><span style={{fontSize:7}}>${Math.round(total*ufHoy/1000)}k</span></div>}
                       <div style={{ width: "100%", height: 100, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
                         <div style={{ display: "flex", flexDirection: "column", borderRadius: "6px 6px 0 0", overflow: "hidden" }}>
                           {m.forecast > 0 && <div style={{ height: Math.max((m.forecast / maxBar) * 100, 3), background: P.peach, border: `1px solid ${P.peachDark}` }}></div>}
@@ -551,9 +557,16 @@ export default function App() {
                   {(prop.estado === "promesa" || prop.estado === "pagado") && prop.fecha_promesa && (
                     <div style={{ fontSize: 12, color: P.textMuted }}>Promesa: {new Date(prop.fecha_promesa + "T12:00:00").toLocaleDateString("es-CL")}</div>
                   )}
-                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                    <button style={S.btnSmall(P.lavenderDark)} onClick={() => openModal("propiedad", { ...prop })}>Editar</button>
-                    <button style={S.btnSmall(P.roseDark)} onClick={() => deletePropiedad(prop.id)}>Eliminar</button>
+                  <div style={{ display: "flex", gap: 6, marginTop: 12, alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: 0, borderRadius: 50, overflow: "hidden", border: `1px solid ${P.border}` }}>
+                      {["reserva","promesa","pagado"].map((e, i) => {
+                        const cfg = STATUS_CFG[e];
+                        const active = prop.estado === e;
+                        return <button key={e} onClick={() => cambiarEstado({...prop, estado: ["reserva","promesa","pagado"][i-1] || "reserva"})} style={{ padding: "5px 12px", border: "none", background: active ? cfg.color : "transparent", color: active ? "#fff" : P.textMuted, fontSize: 11, fontWeight: active ? 700 : 400, cursor: "pointer" }}>{cfg.label}</button>;
+                      })}
+                    </div>
+                    <button style={S.btnSmall(P.lavenderDark)} onClick={() => openModal("propiedad", { ...prop })}>✎</button>
+                    <button style={S.btnSmall(P.roseDark)} onClick={() => deletePropiedad(prop.id)}>✕</button>
                   </div>
                 </div>
               );
@@ -669,9 +682,9 @@ export default function App() {
                     <select style={S.inp} value={form.proyecto_id || ""} onChange={e => ff("proyecto_id", e.target.value)}>
                       <option value="">Seleccionar proyecto</option>
                       {proyectos.filter(p => {
-                        const inm = inmobiliariaById(p.inmobiliaria_id);
-                        const sel = inmobiliariaById(form._inmob);
-                        return inm?.nombre === sel?.nombre;
+                        const inmNombre = inmobiliarias.find(i => i.id === form._inmob)?.nombre;
+                        const pInmNombre = inmobiliarias.find(i => i.id === p.inmobiliaria_id)?.nombre;
+                        return inmNombre && pInmNombre && inmNombre === pInmNombre;
                       }).map(p => (
                         <option key={p.id} value={p.id}>{p.nombre} · {p.porcentaje_zaror}% · {HITO_CFG[p.hito_pago]?.label}</option>
                       ))}
