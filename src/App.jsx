@@ -551,8 +551,20 @@ export default function App() {
                     <div style={{ fontSize: 18, fontWeight: 700, color: P.lavenderDark }}>{fmtUF(com)} UF</div>
                     <div style={{ fontSize: 12, color: P.lavenderDark, opacity: 0.8 }}>${fmt(com * ufHoy)}</div>
                   </div>
-                  {prop.estado === "reserva" && prop.mes_forecast && (
-                    <div style={{ fontSize: 12, color: P.textMuted }}>Forecast: {prop.mes_forecast} · {prop.prob_forecast}% prob.</div>
+                  {prop.estado === "reserva" && (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ fontSize: 11, color: P.textMuted, marginBottom: 4 }}>Probabilidad: <strong>{prop.prob_forecast || 50}%</strong></div>
+                      <input type="range" min={0} max={100} step={10} value={prop.prob_forecast || 50}
+                        onChange={async e => {
+                          await db(`propiedades?id=eq.${prop.id}`, "PATCH", { prob_forecast: parseInt(e.target.value) });
+                          await load();
+                        }}
+                        style={{ width: "100%", accentColor: P.lavenderDark }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: P.textMuted }}>
+                        <span>0%</span><span>50%</span><span>100%</span>
+                      </div>
+                    </div>
                   )}
                   {(prop.estado === "promesa" || prop.estado === "pagado") && prop.fecha_promesa && (
                     <div style={{ fontSize: 12, color: P.textMuted }}>Promesa: {new Date(prop.fecha_promesa + "T12:00:00").toLocaleDateString("es-CL")}</div>
