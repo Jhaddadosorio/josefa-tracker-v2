@@ -668,7 +668,7 @@ export default function App() {
                     <label style={S.label}>Proyecto</label>
                     <select style={S.inp} value={form.proyecto_id || ""} onChange={e => ff("proyecto_id", e.target.value)}>
                       <option value="">Seleccionar proyecto</option>
-                      {proyectos.filter(p => p.inmobiliaria_id === form._inmob).map(p => (
+                      {proyectos.filter(p => String(p.inmobiliaria_id) === String(form._inmob)).map(p => (
                         <option key={p.id} value={p.id}>{p.nombre} · {p.porcentaje_zaror}% · {HITO_CFG[p.hito_pago]?.label}</option>
                       ))}
                     </select>
