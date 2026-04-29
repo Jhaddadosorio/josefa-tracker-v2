@@ -351,7 +351,13 @@ export default function App() {
   const tots = totales();
   const maxBar = Math.max(...meses.map(m => m.pagado + m.comprometido + m.forecast), 1);
 
-  const openModal = (tipo, obj = {}) => { setModal(tipo); setForm({ ...obj }); };
+  const openModal = (tipo, obj = {}) => {
+    if (tipo === "propiedad" && obj.proyecto_id) {
+      const proy = proyectoById(obj.proyecto_id);
+      obj._inmob = proy?.inmobiliaria_id || "";
+    }
+    setModal(tipo); setForm({ ...obj });
+  };
   const closeModal = () => { setModal(null); setForm({}); };
   const ff = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
