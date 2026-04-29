@@ -668,11 +668,14 @@ export default function App() {
                     <label style={S.label}>Proyecto</label>
                     <select style={S.inp} value={form.proyecto_id || ""} onChange={e => ff("proyecto_id", e.target.value)}>
                       <option value="">Seleccionar proyecto</option>
-                      {proyectos.filter(p => p.inmobiliaria_id?.trim().toLowerCase() === form._inmob?.trim().toLowerCase()).map(p => (
+                      {proyectos.filter(p => {
+                        const inm = inmobiliariaById(p.inmobiliaria_id);
+                        const sel = inmobiliariaById(form._inmob);
+                        return inm?.nombre === sel?.nombre;
+                      }).map(p => (
                         <option key={p.id} value={p.id}>{p.nombre} · {p.porcentaje_zaror}% · {HITO_CFG[p.hito_pago]?.label}</option>
                       ))}
                     </select>
-                    <div style={{fontSize:10,color:"red"}}>inmob: {form._inmob} | proyectos con ese id: {proyectos.filter(p=>p.inmobiliaria_id?.trim().toLowerCase()===form._inmob?.trim().toLowerCase()).length}</div>
                   </>
                 )}
                 <label style={S.label}>Valor en UF</label>
